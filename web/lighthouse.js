@@ -417,7 +417,7 @@ app.registerExtension({
             const options = origNode.apply(this, arguments);
             options.push(null); // separator
             options.push({
-                content: "🔦 Lighthouse: Anchor from current node",
+                content: "🔦 Lighthouse: Anchor from this node",
                 callback: () => anchorOn(node?.id),
             });
             options.push({

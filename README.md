@@ -21,7 +21,7 @@ Lighthouse is a non-destructive overlay that answers it visually. Click the node
 
 ### What it does
 
-Right-click any node and pick **🔦 Lighthouse: Anchor from current node**. The rest of the workflow lights up by graph distance from that node:
+Right-click any node and pick **🔦 Lighthouse: Anchor from this node**. The rest of the workflow lights up by graph distance from that node:
 
 | Distance | Halo |
 |---|---|
@@ -43,7 +43,7 @@ Works in both directions — Lighthouse walks both **upstream** (input links, wh
 
 Two menu items, both on the **node** right-click menu (not the canvas menu):
 
-- **🔦 Lighthouse: Anchor from current node** — runs the BFS straight away from the right-clicked node. Turns Lighthouse on if it was off.
+- **🔦 Lighthouse: Anchor from this node** — runs the BFS straight away from the right-clicked node. Turns Lighthouse on if it was off.
 - **🔦 Lighthouse: Off** — turns the mode off and hides the legend panel.
 
 ---
