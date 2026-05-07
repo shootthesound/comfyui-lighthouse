@@ -27,6 +27,12 @@ let LIGHTHOUSE_ENABLED = false;
 let SELECTED_NODE_ID = null;
 let DISTANCE_MAP = new Map(); // nodeId -> integer distance from selected
 
+// Focus slider position, 0..1.
+//   0   = every band rendered at full opacity
+//   1   = only the 1-hop band (red) is fully visible, the rest faded out
+// Linear ramp between — see bandOpacity() below.
+let FOCUS_LEVEL = 0;
+
 // =====================================================================
 // Distance-from-selected gradient
 //
@@ -93,6 +99,24 @@ function bandForDistance(d) {
     if (d <= 0) return null;             // selected node — handled separately
     const idx = Math.min(d - 1, BANDS.length - 1);
     return BANDS[idx];
+}
+
+// Per-band opacity given the current FOCUS_LEVEL.
+//   threshold = (1 - FOCUS_LEVEL) * (BANDS.length - 1)
+//   alpha     = clamp(1 - (idx - threshold), 0, 1)
+// At FOCUS_LEVEL=0, threshold = N-1 → every band is fully on.
+// At FOCUS_LEVEL=1, threshold = 0   → only band 0 (1-hop / red) is on,
+//                                     band 1 fades to 0, etc.
+function bandOpacityForIdx(idx) {
+    if (FOCUS_LEVEL <= 0) return 1;
+    const threshold = (1 - FOCUS_LEVEL) * (BANDS.length - 1);
+    return Math.max(0, Math.min(1, 1 - (idx - threshold)));
+}
+
+function bandOpacityForDistance(d) {
+    if (d <= 0) return 1; // selected node always full opacity
+    const idx = Math.min(d - 1, BANDS.length - 1);
+    return bandOpacityForIdx(idx);
 }
 
 // =====================================================================
@@ -184,8 +208,11 @@ function paintLighthouseRing(node, ctx) {
 
     const band = bandForDistance(d);
     if (!band) return;
+    const alpha = bandOpacityForDistance(d);
+    if (alpha <= 0.001) return; // fully faded, skip
 
     ctx.save();
+    ctx.globalAlpha = alpha;
     ctx.lineWidth = 6;
     ctx.strokeStyle = band.color;
     ctx.strokeRect(x0, y0, w0, h0);
@@ -204,6 +231,9 @@ function paintLighthouseRing(node, ctx) {
 
 let LEGEND_EL = null;
 let LEGEND_TITLE_EL = null;
+let LEGEND_BAND_SEGMENTS = []; // refs to coloured segments inside the bar (one per BAND)
+let LEGEND_BAND_LABELS = [];   // refs to label rows alongside the bar (one per BAND)
+let LEGEND_FOCUS_VALUE_EL = null;
 
 function ensureLegend() {
     if (LEGEND_EL) return LEGEND_EL;
@@ -279,35 +309,100 @@ function ensureLegend() {
     const labels = document.createElement("div");
     labels.style.cssText = "display: flex; flex-direction: column; gap: 0;";
 
-    const allBands = [
-        { color: SELECTED_RING_COLOR, label: "selected node" },
-        ...BANDS,
-    ];
+    LEGEND_BAND_SEGMENTS = [];
+    LEGEND_BAND_LABELS = [];
 
-    for (const b of allBands) {
+    // Selected-node row (always opaque, never affected by focus slider)
+    {
         const seg = document.createElement("div");
-        seg.style.cssText = `flex: 1 0 22px; background: ${b.color};`;
+        seg.style.cssText = `flex: 1 0 22px; background: ${SELECTED_RING_COLOR};`;
         bar.appendChild(seg);
 
         const labelRow = document.createElement("div");
         labelRow.style.cssText = `
-            min-height: 22px;
-            display: flex;
-            align-items: center;
-            font-size: 11px;
-            color: #cfd2d6;
+            min-height: 22px; display: flex; align-items: center;
+            font-size: 11px; color: #cfd2d6;
+        `;
+        labelRow.textContent = "selected node";
+        labels.appendChild(labelRow);
+    }
+
+    for (const b of BANDS) {
+        const seg = document.createElement("div");
+        seg.style.cssText = `flex: 1 0 22px; background: ${b.color}; transition: opacity 80ms linear;`;
+        bar.appendChild(seg);
+        LEGEND_BAND_SEGMENTS.push(seg);
+
+        const labelRow = document.createElement("div");
+        labelRow.style.cssText = `
+            min-height: 22px; display: flex; align-items: center;
+            font-size: 11px; color: #cfd2d6; transition: opacity 80ms linear;
         `;
         labelRow.textContent = b.label;
         labels.appendChild(labelRow);
+        LEGEND_BAND_LABELS.push(labelRow);
     }
 
     barWrap.appendChild(bar);
     barWrap.appendChild(labels);
     wrap.appendChild(barWrap);
 
+    // --- Focus slider ---
+    // Drag right to fade out the further bands. At max only the 1-hop
+    // (red) band remains, so you can see one ring of neighbours at a time
+    // around a complex node.
+    const focusWrap = document.createElement("div");
+    focusWrap.style.cssText = "margin-top: 10px; display: flex; flex-direction: column; gap: 4px;";
+
+    const focusLabelRow = document.createElement("div");
+    focusLabelRow.style.cssText = "font-size: 11px; color: #aaa; display: flex; justify-content: space-between;";
+    const focusLabelLeft = document.createElement("span");
+    focusLabelLeft.textContent = "Focus";
+    const focusLabelRight = document.createElement("span");
+    focusLabelRight.textContent = "all hops";
+    LEGEND_FOCUS_VALUE_EL = focusLabelRight;
+    focusLabelRow.appendChild(focusLabelLeft);
+    focusLabelRow.appendChild(focusLabelRight);
+
+    const focusSlider = document.createElement("input");
+    focusSlider.type = "range";
+    focusSlider.min = "0";
+    focusSlider.max = "100";
+    focusSlider.value = String(Math.round(FOCUS_LEVEL * 100));
+    focusSlider.style.cssText = "width: 100%; margin: 0; accent-color: #ff5040; cursor: pointer;";
+    focusSlider.addEventListener("input", (e) => {
+        FOCUS_LEVEL = (parseFloat(e.target.value) || 0) / 100;
+        applyFocusToLegend();
+        app?.canvas?.setDirty(true, true);
+    });
+
+    focusWrap.appendChild(focusLabelRow);
+    focusWrap.appendChild(focusSlider);
+    wrap.appendChild(focusWrap);
+
     document.body.appendChild(wrap);
     LEGEND_EL = wrap;
+    applyFocusToLegend();
     return wrap;
+}
+
+function applyFocusToLegend() {
+    if (!LEGEND_BAND_SEGMENTS.length) return;
+    let visibleBands = 0;
+    for (let i = 0; i < BANDS.length; i++) {
+        const a = bandOpacityForIdx(i);
+        const seg = LEGEND_BAND_SEGMENTS[i];
+        const lbl = LEGEND_BAND_LABELS[i];
+        if (seg) seg.style.opacity = a;
+        if (lbl) lbl.style.opacity = Math.max(0.25, a);
+        if (a > 0.05) visibleBands++;
+    }
+    if (LEGEND_FOCUS_VALUE_EL) {
+        LEGEND_FOCUS_VALUE_EL.textContent =
+            visibleBands === BANDS.length ? "all hops" :
+            visibleBands === 1            ? "1 hop only" :
+                                            `~${visibleBands} hops`;
+    }
 }
 
 function showLegend() {
