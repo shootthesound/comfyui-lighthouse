@@ -208,15 +208,28 @@ function paintLighthouseRing(node, ctx) {
 
     const band = bandForDistance(d);
     if (!band) return;
-    const alpha = bandOpacityForDistance(d);
-    if (alpha <= 0.001) return; // fully faded, skip
 
+    // Coloured outline — always full opacity so the band is legible at
+    // any focus level. Distance comes from the *outline*; the focus
+    // slider darkens the *node body* of further-band nodes instead.
     ctx.save();
-    ctx.globalAlpha = alpha;
     ctx.lineWidth = 6;
     ctx.strokeStyle = band.color;
     ctx.strokeRect(x0, y0, w0, h0);
     ctx.restore();
+
+    // Body darken proportional to how faded this band is on the slider.
+    // alpha == 1 → no darkening; alpha == 0 → ~85% black wash on top
+    // of the node body + title bar (but not the outline itself).
+    const alpha = bandOpacityForDistance(d);
+    if (alpha < 0.999) {
+        const darken = (1 - alpha) * 0.85;
+        ctx.save();
+        ctx.fillStyle = `rgba(0, 0, 0, ${darken})`;
+        // Inset 4px so the coloured outline remains crisp on top.
+        ctx.fillRect(x0 + 4, y0 + 4, w0 - 8, h0 - 8);
+        ctx.restore();
+    }
 }
 
 // =====================================================================
