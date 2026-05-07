@@ -10,6 +10,10 @@
   <a href="https://buymeacoffee.com/lorasandlenses"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee"></a>
 </p>
 
+<p align="center">
+  <img src="anchored.png" alt="Lighthouse anchored on the positive Prompt node — direct neighbours red, next hop orange, fading through yellow / green / blue to violet. Floating legend panel in the bottom-left." width="780">
+</p>
+
 ---
 
 ### Two reasons to use this
@@ -21,6 +25,12 @@ When a graph grows past ~20 nodes you spend a lot of time mentally tracing wires
 Workflows downloaded from civitai / GitHub / a friend can be intimidating walls of nodes. Lighthouse turns them into a guided tour. Anchor on the **CheckpointLoader** to see the model's full influence radius (everything red is patching the model directly, orange is one step removed, etc.). Anchor on the **KSampler** to see what's feeding the sample. Anchor on a **SaveImage** to walk the chain backward all the way to the inputs. Each anchor point teaches you a different slice of the workflow's structure without having to manually follow every wire.
 
 The slider also makes a great *quiz tool*: dial Focus to max, anchor on a node, and you can only see its 1-hop neighbours — try to predict what's beyond before you slide back down.
+
+<p align="center">
+  <img src="focused.png" alt="Same workflow as above with the Focus slider pulled up — the rest of the canvas darkens almost to black, leaving only the direct (1-hop) neighbours of the anchored node fully visible." width="780">
+</p>
+
+<p align="center"><em>Same workflow, Focus slider pulled up — only the 1-hop neighbours of the anchor stay lit.</em></p>
 
 ---
 
@@ -50,6 +60,10 @@ Two menu items, both on the **node** right-click menu (not the canvas menu):
 
 - **🔦 Lighthouse: Anchor from this node** — runs the BFS straight away from the right-clicked node. Turns Lighthouse on if it was off.
 - **🔦 Lighthouse: Off** — turns the mode off and hides the legend panel.
+
+<p align="center">
+  <img src="menu.png" alt="Right-click on any node and the bottom of the context menu has two Lighthouse items: 'Anchor from this node' and 'Off'." width="380">
+</p>
 
 ---
 
