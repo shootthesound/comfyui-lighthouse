@@ -46,7 +46,7 @@ const BANDS = [
     { color: "#ffd840", glow: "#ffe890", label: "3 hops" },
     { color: "#50d050", glow: "#80e090", label: "4 hops" },
     { color: "#5090ff", glow: "#80b0ff", label: "5 hops" },
-    { color: "#9070d0", glow: "#b090e0", label: "6+ hops" },
+    { color: "#9070d0", glow: "#b090e0", label: "6+ hops / unconnected" },
 ];
 
 const SELECTED_RING_COLOR = "#ffffff";
@@ -180,8 +180,16 @@ function wrapDrawNode() {
 
 function paintLighthouseRing(node, ctx) {
     if (!node || !node.size || !node.id) return;
-    const d = DISTANCE_MAP.get(node.id);
-    if (d === undefined) return; // not reachable from selected node
+    if (SELECTED_NODE_ID == null) return; // no anchor, no rings at all
+
+    let d = DISTANCE_MAP.get(node.id);
+    if (d === undefined) {
+        // Not reachable from the anchor — treat as the last band so the
+        // user sees that this node is unconnected to the current focus.
+        // Falls into "6+ hops / unconnected" (violet) and will fade out
+        // alongside the further-band nodes when the focus slider is up.
+        d = BANDS.length; // → idx = BANDS.length - 1 (last band)
+    }
 
     const w = node.size[0];
     const h = node.size[1];
