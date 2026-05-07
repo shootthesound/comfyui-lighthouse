@@ -1,8 +1,9 @@
 <h1 align="center">Lighthouse — for ComfyUI</h1>
 
 <p align="center">
-  Click any node and watch the rest of the workflow light up by graph distance.<br>
-  Direct neighbours glow <span style="color:#ff5040"><strong>red</strong></span>. One step further: <span style="color:#ff9020"><strong>orange</strong></span>. Then <span style="color:#ffd840"><strong>yellow</strong></span>, <span style="color:#50d050"><strong>green</strong></span>, <span style="color:#5090ff"><strong>blue</strong></span>, fading off.
+  A non-destructive overlay that lights up every node by graph distance from the one you click.<br>
+  <strong>Diagnostic</strong> for big real workflows · <strong>Educational</strong> for understanding workflows other people built · <strong>Surgical</strong> when you need to focus on one neighbourhood at a time.<br>
+  Direct neighbours glow <span style="color:#ff5040"><strong>red</strong></span>, then <span style="color:#ff9020"><strong>orange</strong></span>, <span style="color:#ffd840"><strong>yellow</strong></span>, <span style="color:#50d050"><strong>green</strong></span>, <span style="color:#5090ff"><strong>blue</strong></span>, <span style="color:#9070d0"><strong>violet</strong></span> (6+ hops or unconnected).
 </p>
 
 <p align="center">
@@ -11,11 +12,15 @@
 
 ---
 
-### Why I built this
+### Two reasons to use this
 
-When a workflow grows past ~20 nodes you spend a lot of time mentally tracing wires to figure out what's actually feeding what. "If I tweak this CLIP encode, what does it ripple into? Which sampler is on the other end of this controlnet apply?" — that kind of question.
+**1. Diagnostic — for big, real workflows.**
+When a graph grows past ~20 nodes you spend a lot of time mentally tracing wires. "If I tweak this CLIP encode, what does it ripple into? Which sampler is on the other end of this controlnet apply? Why is *that* model loader still wired in — does anything still consume it?" Lighthouse answers all three at a glance. Right-click the node you're curious about, pick **Anchor from this node**, and the whole canvas tells you how the graph relates to it: direct dependencies and consumers in red, two-hops in orange, all the way down. Pull the **Focus** slider up and only the immediate neighbours stay lit while everything further away fades to black — useful for surgically zooming in when a workflow is dense.
 
-Lighthouse is a non-destructive overlay that answers it visually. Click the node you're curious about, and every other node lights up by how many connections away it is. The closer something is to the click target, the warmer its halo.
+**2. Educational — for learning a workflow you didn't build.**
+Workflows downloaded from civitai / GitHub / a friend can be intimidating walls of nodes. Lighthouse turns them into a guided tour. Anchor on the **CheckpointLoader** to see the model's full influence radius (everything red is patching the model directly, orange is one step removed, etc.). Anchor on the **KSampler** to see what's feeding the sample. Anchor on a **SaveImage** to walk the chain backward all the way to the inputs. Each anchor point teaches you a different slice of the workflow's structure without having to manually follow every wire.
+
+The slider also makes a great *quiz tool*: dial Focus to max, anchor on a node, and you can only see its 1-hop neighbours — try to predict what's beyond before you slide back down.
 
 ---
 
