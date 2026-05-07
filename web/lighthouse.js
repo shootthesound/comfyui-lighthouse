@@ -114,10 +114,14 @@ function refreshSelection() {
     }
 
     const newId = target?.id ?? null;
-    if (newId === SELECTED_NODE_ID && DISTANCE_MAP.size > 0) return;
+    if (newId === SELECTED_NODE_ID && DISTANCE_MAP.size > 0) {
+        updateLegendTitle();
+        return;
+    }
 
     SELECTED_NODE_ID = newId;
     DISTANCE_MAP = newId != null ? buildDistanceMap(app.graph, newId) : new Map();
+    updateLegendTitle();
     canvas.setDirty(true, true);
 }
 
@@ -125,6 +129,7 @@ function clearSelection() {
     if (SELECTED_NODE_ID == null && DISTANCE_MAP.size === 0) return;
     SELECTED_NODE_ID = null;
     DISTANCE_MAP = new Map();
+    updateLegendTitle();
     app?.canvas?.setDirty(true, true);
 }
 
@@ -188,91 +193,142 @@ function paintLighthouseRing(node, ctx) {
 }
 
 // =====================================================================
-// Legend overlay — small fixed key in the bottom-left so the user knows
-// which colour means which distance.
+// Floating HTML legend panel
+//
+// Anchored bottom-left of the viewport via position:fixed. Visible while
+// LIGHTHOUSE_ENABLED is true, hidden otherwise. Updates its title line to
+// either "click a node" prompt or "distance from node N" once a node is
+// anchored. Lives entirely in the DOM so it sits on top of canvas + Vue
+// overlays at all zoom levels.
 // =====================================================================
 
-let drawForegroundWrapped = false;
+let LEGEND_EL = null;
+let LEGEND_TITLE_EL = null;
 
-function wrapDrawForeground() {
-    if (drawForegroundWrapped) return;
-    if (typeof LGraphCanvas === "undefined" || !LGraphCanvas.prototype) return;
-    const proto = LGraphCanvas.prototype;
-    const orig = proto.drawFrontCanvas || proto.drawForeground;
-    if (!orig) return;
-    const wrapName = proto.drawFrontCanvas ? "drawFrontCanvas" : "drawForeground";
-    proto[wrapName] = function () {
-        const result = orig.apply(this, arguments);
-        if (LIGHTHOUSE_ENABLED) {
-            try { paintLighthouseLegend(this); } catch (e) { /* noop */ }
-        }
-        return result;
-    };
-    drawForegroundWrapped = true;
+function ensureLegend() {
+    if (LEGEND_EL) return LEGEND_EL;
+    const wrap = document.createElement("div");
+    wrap.style.cssText = `
+        position: fixed;
+        left: 16px;
+        bottom: 16px;
+        z-index: 9000;
+        background: rgba(20, 22, 26, 0.92);
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 10px;
+        padding: 10px 12px 10px 12px;
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+        color: #ddd;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+        display: none;
+        user-select: none;
+        pointer-events: auto;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+    `;
+
+    const header = document.createElement("div");
+    header.style.cssText = "display: flex; align-items: center; gap: 8px; margin-bottom: 8px;";
+
+    const flame = document.createElement("span");
+    flame.textContent = "🔦";
+    flame.style.cssText = "font-size: 14px;";
+
+    const title = document.createElement("span");
+    title.style.cssText = "font-weight: bold; color: #fff; font-size: 12px;";
+    title.textContent = "Lighthouse";
+    LEGEND_TITLE_EL = title;
+
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "×";
+    closeBtn.title = "Turn Lighthouse off";
+    closeBtn.style.cssText = `
+        margin-left: auto;
+        background: transparent;
+        color: #aaa;
+        border: none;
+        font-size: 16px;
+        line-height: 1;
+        padding: 0 4px;
+        cursor: pointer;
+    `;
+    closeBtn.addEventListener("click", () => setEnabled(false));
+
+    header.appendChild(flame);
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    wrap.appendChild(header);
+
+    // Continuous colour bar — one tall strip showing the band sequence
+    // top-to-bottom, with hop labels alongside each segment.
+    const barWrap = document.createElement("div");
+    barWrap.style.cssText = "display: flex; flex-direction: row; align-items: stretch; gap: 8px;";
+
+    const bar = document.createElement("div");
+    bar.style.cssText = `
+        width: 14px;
+        border-radius: 3px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid rgba(0,0,0,0.45);
+        flex: 0 0 auto;
+    `;
+
+    const labels = document.createElement("div");
+    labels.style.cssText = "display: flex; flex-direction: column; gap: 0;";
+
+    const allBands = [
+        { color: SELECTED_RING_COLOR, label: "selected node" },
+        ...BANDS,
+    ];
+
+    for (const b of allBands) {
+        const seg = document.createElement("div");
+        seg.style.cssText = `flex: 1 0 22px; background: ${b.color};`;
+        bar.appendChild(seg);
+
+        const labelRow = document.createElement("div");
+        labelRow.style.cssText = `
+            min-height: 22px;
+            display: flex;
+            align-items: center;
+            font-size: 11px;
+            color: #cfd2d6;
+        `;
+        labelRow.textContent = b.label;
+        labels.appendChild(labelRow);
+    }
+
+    barWrap.appendChild(bar);
+    barWrap.appendChild(labels);
+    wrap.appendChild(barWrap);
+
+    document.body.appendChild(wrap);
+    LEGEND_EL = wrap;
+    return wrap;
 }
 
-function paintLighthouseLegend(canvas) {
-    const ctx = canvas?.ctx;
-    if (!ctx) return;
-    const cw = canvas.canvas?.width ?? 0;
-    const ch = canvas.canvas?.height ?? 0;
-    if (!cw || !ch) return;
+function showLegend() {
+    const el = ensureLegend();
+    el.style.display = "block";
+    updateLegendTitle();
+}
 
-    const padX = 18;
-    const padY = 18;
-    const lineH = 18;
-    const swatch = 12;
-    const rows = SELECTED_NODE_ID != null
-        ? [{ color: SELECTED_RING_COLOR, label: "selected" }, ...BANDS]
-        : BANDS;
+function hideLegend() {
+    if (LEGEND_EL) LEGEND_EL.style.display = "none";
+}
 
-    const titleH = 22;
-    const boxH = titleH + rows.length * lineH + padY;
-    let boxW = 220;
-
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // ignore canvas pan/zoom
-    ctx.font = "12px Arial";
-    for (const r of rows) {
-        const w = ctx.measureText(r.label || "").width + swatch + 24 + padX;
-        if (w > boxW) boxW = w;
+function updateLegendTitle() {
+    if (!LEGEND_TITLE_EL) return;
+    if (SELECTED_NODE_ID != null) {
+        const node = app?.graph?.getNodeById(SELECTED_NODE_ID);
+        const niceName = node?.title || node?.type || `#${SELECTED_NODE_ID}`;
+        LEGEND_TITLE_EL.textContent = `Lighthouse — anchored on ${niceName}`;
+    } else {
+        LEGEND_TITLE_EL.textContent = "Lighthouse — click any node";
     }
-
-    const x = padX;
-    const y = ch - padY - boxH;
-
-    // Background
-    ctx.fillStyle = "rgba(20, 20, 22, 0.86)";
-    ctx.strokeStyle = "rgba(255,255,255,0.18)";
-    ctx.lineWidth = 1;
-    ctx.fillRect(x, y, boxW, boxH);
-    ctx.strokeRect(x + 0.5, y + 0.5, boxW - 1, boxH - 1);
-
-    // Title
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 12px Arial";
-    ctx.textBaseline = "top";
-    const title = SELECTED_NODE_ID != null
-        ? `Lighthouse — distance from node ${SELECTED_NODE_ID}`
-        : "Lighthouse — click any node to highlight its neighbourhood";
-    ctx.fillText(title, x + padX / 2, y + 6);
-
-    // Rows
-    ctx.font = "12px Arial";
-    let ry = y + titleH + 4;
-    for (const r of rows) {
-        // Swatch
-        ctx.fillStyle = r.color;
-        ctx.fillRect(x + padX / 2, ry + (lineH - swatch) / 2, swatch, swatch);
-        ctx.strokeStyle = "rgba(0,0,0,0.5)";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x + padX / 2 + 0.5, ry + (lineH - swatch) / 2 + 0.5, swatch - 1, swatch - 1);
-        // Label
-        ctx.fillStyle = "#ddd";
-        ctx.fillText(r.label, x + padX / 2 + swatch + 8, ry + 3);
-        ry += lineH;
-    }
-    ctx.restore();
 }
 
 // =====================================================================
@@ -323,11 +379,12 @@ function setEnabled(on) {
     LIGHTHOUSE_ENABLED = !!on;
     if (LIGHTHOUSE_ENABLED) {
         wrapDrawNode();
-        wrapDrawForeground();
         wrapSelectionEvents();
+        showLegend();
         refreshSelection();
     } else {
         clearSelection();
+        hideLegend();
     }
     app?.canvas?.setDirty(true, true);
 }
@@ -340,6 +397,7 @@ function anchorOn(nodeId) {
     if (!LIGHTHOUSE_ENABLED) setEnabled(true);
     SELECTED_NODE_ID = nodeId;
     DISTANCE_MAP = buildDistanceMap(app.graph, nodeId);
+    updateLegendTitle();
     app?.canvas?.setDirty(true, true);
 }
 
@@ -349,7 +407,6 @@ app.registerExtension({
         // Always wrap once so the toggle just gates the rendering. Wrapping
         // up-front avoids a noticeable hitch on first enable.
         wrapDrawNode();
-        wrapDrawForeground();
         wrapSelectionEvents();
 
         // Empty-canvas right-click menu — toggle + manual refresh.
