@@ -41,7 +41,10 @@ Works in both directions — Lighthouse walks both **upstream** (input links, wh
 
 ### Right-click menu actions
 
-- **🔦 Lighthouse: ON / OFF** — toggle the mode.
+The toggle is available **both on the empty canvas right-click menu and on any node's right-click menu** so you don't have to navigate away to flip the mode.
+
+- **🔦 Lighthouse: ON / OFF** — toggle the mode (canvas + node menus).
+- **🔦 Lighthouse: Anchor on this node** — *(node menu only)* run the BFS straight away from the right-clicked node, even if it isn't currently selected. Lights up the mode if it's off.
 - **🔦 Lighthouse: Refresh from current selection** — re-run the BFS without changing selection. Useful after you've reconnected wires and want the halo refreshed.
 
 ---

@@ -165,17 +165,18 @@ function paintLighthouseRing(node, ctx) {
 
     if (d === 0) {
         // The selected node itself — bright white double-ring so it stands
-        // out from the coloured bands.
+        // out from the coloured bands. Doubled stroke widths to match the
+        // beefier coloured halos.
         ctx.save();
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 8;
         ctx.strokeStyle = SELECTED_RING_COLOR;
         ctx.shadowColor = SELECTED_RING_COLOR;
-        ctx.shadowBlur = 18;
+        ctx.shadowBlur = 22;
         ctx.strokeRect(x0, y0, w0, h0);
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 3;
         ctx.shadowBlur = 0;
         ctx.strokeStyle = "rgba(255,255,255,0.55)";
-        ctx.strokeRect(x0 - 4, y0 - 4, w0 + 8, h0 + 8);
+        ctx.strokeRect(x0 - 5, y0 - 5, w0 + 10, h0 + 10);
         ctx.restore();
         return;
     }
@@ -184,10 +185,10 @@ function paintLighthouseRing(node, ctx) {
     if (!band) return;
 
     ctx.save();
-    // Outer glow halo
-    ctx.lineWidth = 3;
+    // Outer glow halo — doubled stroke width so the colour reads at a glance.
+    ctx.lineWidth = 6;
     ctx.shadowColor = band.glow;
-    ctx.shadowBlur = 14;
+    ctx.shadowBlur = 16;
     ctx.strokeStyle = band.color;
     ctx.strokeRect(x0, y0, w0, h0);
     ctx.restore();
@@ -338,6 +339,17 @@ function setEnabled(on) {
     app?.canvas?.setDirty(true, true);
 }
 
+// Anchor the BFS on a specific node id, regardless of the current canvas
+// selection. Used by the node-right-click "Anchor on this node" item so
+// the user can highlight a node's neighbourhood without first selecting it.
+function anchorOn(nodeId) {
+    if (nodeId == null) return;
+    if (!LIGHTHOUSE_ENABLED) setEnabled(true);
+    SELECTED_NODE_ID = nodeId;
+    DISTANCE_MAP = buildDistanceMap(app.graph, nodeId);
+    app?.canvas?.setDirty(true, true);
+}
+
 app.registerExtension({
     name: "Lighthouse.GraphDistance",
     setup(app) {
@@ -347,15 +359,42 @@ app.registerExtension({
         wrapDrawForeground();
         wrapSelectionEvents();
 
-        const orig = LGraphCanvas.prototype.getCanvasMenuOptions;
+        // Empty-canvas right-click menu — toggle + manual refresh.
+        const origCanvas = LGraphCanvas.prototype.getCanvasMenuOptions;
         LGraphCanvas.prototype.getCanvasMenuOptions = function () {
-            const options = orig.apply(this, arguments);
+            const options = origCanvas.apply(this, arguments);
             options.push(null); // separator
             options.push({
                 content: LIGHTHOUSE_ENABLED
                     ? "🔦 Lighthouse: ON  (click to disable)"
                     : "🔦 Lighthouse: OFF (click to enable)",
                 callback: () => setEnabled(!LIGHTHOUSE_ENABLED),
+            });
+            options.push({
+                content: "🔦 Lighthouse: Refresh from current selection",
+                callback: () => { if (LIGHTHOUSE_ENABLED) refreshSelection(); },
+            });
+            return options;
+        };
+
+        // Node right-click menu — toggle + anchor-on-this-node. The same
+        // toggle is mirrored here so the user can flip the mode without
+        // having to navigate back to empty canvas first. The anchor item
+        // skips the "first click + then refresh" two-step by running the
+        // BFS straight away on whichever node was right-clicked.
+        const origNode = LGraphCanvas.prototype.getNodeMenuOptions;
+        LGraphCanvas.prototype.getNodeMenuOptions = function (node) {
+            const options = origNode.apply(this, arguments);
+            options.push(null); // separator
+            options.push({
+                content: LIGHTHOUSE_ENABLED
+                    ? "🔦 Lighthouse: ON  (click to disable)"
+                    : "🔦 Lighthouse: OFF (click to enable)",
+                callback: () => setEnabled(!LIGHTHOUSE_ENABLED),
+            });
+            options.push({
+                content: "🔦 Lighthouse: Anchor on this node",
+                callback: () => anchorOn(node?.id),
             });
             options.push({
                 content: "🔦 Lighthouse: Refresh from current selection",
