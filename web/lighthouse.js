@@ -165,16 +165,12 @@ function paintLighthouseRing(node, ctx) {
 
     if (d === 0) {
         // The selected node itself — bright white double-ring so it stands
-        // out from the coloured bands. Doubled stroke widths to match the
-        // beefier coloured halos.
+        // out from the coloured bands. Crisp strokes, no shadow blur.
         ctx.save();
         ctx.lineWidth = 8;
         ctx.strokeStyle = SELECTED_RING_COLOR;
-        ctx.shadowColor = SELECTED_RING_COLOR;
-        ctx.shadowBlur = 22;
         ctx.strokeRect(x0, y0, w0, h0);
         ctx.lineWidth = 3;
-        ctx.shadowBlur = 0;
         ctx.strokeStyle = "rgba(255,255,255,0.55)";
         ctx.strokeRect(x0 - 5, y0 - 5, w0 + 10, h0 + 10);
         ctx.restore();
@@ -185,10 +181,7 @@ function paintLighthouseRing(node, ctx) {
     if (!band) return;
 
     ctx.save();
-    // Outer glow halo — doubled stroke width so the colour reads at a glance.
     ctx.lineWidth = 6;
-    ctx.shadowColor = band.glow;
-    ctx.shadowBlur = 16;
     ctx.strokeStyle = band.color;
     ctx.strokeRect(x0, y0, w0, h0);
     ctx.restore();
