@@ -46,7 +46,7 @@ Right-click any node and pick **🔦 Lighthouse: Anchor from this node**. The re
 | 3 hops | yellow |
 | 4 hops | green |
 | 5 hops | blue |
-| 6+ hops | violet |
+| 6+ hops or unconnected to anchor | violet |
 
 A floating legend panel appears in the bottom-left of the viewport while the mode is active, with a colourbar and a header that reads "anchored on `<node title>`". Click the **×** in its corner (or the right-click menu's **Off** item) to dismiss — the workflow returns to its normal appearance.
 
@@ -69,7 +69,7 @@ Two menu items, both on the **node** right-click menu (not the canvas menu):
 
 ### How it works
 
-Pure JS extension. When you click a node, Lighthouse runs a breadth-first search across `node.inputs[i].link` and `node.outputs[i].links[]` to build a `nodeId → distance` map. The overlay is then drawn by extending `LGraphCanvas.prototype.drawNode` to stroke a coloured ring around each node based on its distance.
+Pure JS extension. When you pick **Anchor from this node**, Lighthouse runs a breadth-first search across `node.inputs[i].link` and `node.outputs[i].links[]` to build a `nodeId → distance` map. The overlay is then drawn by extending `LGraphCanvas.prototype.drawNode` to stroke a coloured ring around each node based on its distance, and to wash a black overlay over its body proportional to the Focus slider position.
 
 **Nothing in the workflow is modified.** No `bgcolor`, no `color`, no link state, no node properties. The overlay is purely visual; turn the mode off and the canvas is identical to before.
 
@@ -79,14 +79,14 @@ Pure JS extension. When you click a node, Lighthouse runs a breadth-first search
 
 1. Drop the `comfyui-lighthouse` folder into `ComfyUI/custom_nodes/`.
 2. Restart ComfyUI (or reload the browser tab if hot-reloading is on).
-3. Right-click empty canvas → **🔦 Lighthouse: ON**.
-4. Click any node.
+3. Right-click any node → **🔦 Lighthouse: Anchor from this node**.
+4. The workflow lights up. Drag the **Focus** slider in the legend panel to dial in. Right-click any node → **🔦 Lighthouse: Off** when done.
 
 ---
 
 ### Limitations / notes
 
-- **Nodes not connected to the click target stay normal.** Lighthouse only highlights what's reachable in the graph. If a node looks unhighlighted, it has no path of links to your click target.
+- **Nodes not connected to the anchor are treated as the last band (violet, "6+ hops / unconnected").** They get a violet outline and respond to the Focus slider the same way the actual 6+ hop nodes do, so unconnected nodes are visually distinct from "definitely related but far away".
 - **Bidirectional, not directional.** Distance counts hops in either direction. If you only want "downstream from here", that's a future toggle — open an issue if you want it.
 - **Multi-select picks the first.** If you have several nodes selected, Lighthouse anchors on the first one. Click a single node to be unambiguous.
 
