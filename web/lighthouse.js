@@ -409,46 +409,20 @@ app.registerExtension({
         wrapDrawNode();
         wrapSelectionEvents();
 
-        // Empty-canvas right-click menu — toggle + manual refresh.
-        const origCanvas = LGraphCanvas.prototype.getCanvasMenuOptions;
-        LGraphCanvas.prototype.getCanvasMenuOptions = function () {
-            const options = origCanvas.apply(this, arguments);
-            options.push(null); // separator
-            options.push({
-                content: LIGHTHOUSE_ENABLED
-                    ? "🔦 Lighthouse: ON  (click to disable)"
-                    : "🔦 Lighthouse: OFF (click to enable)",
-                callback: () => setEnabled(!LIGHTHOUSE_ENABLED),
-            });
-            options.push({
-                content: "🔦 Lighthouse: Refresh from current selection",
-                callback: () => { if (LIGHTHOUSE_ENABLED) refreshSelection(); },
-            });
-            return options;
-        };
-
-        // Node right-click menu — toggle + anchor-on-this-node. The same
-        // toggle is mirrored here so the user can flip the mode without
-        // having to navigate back to empty canvas first. The anchor item
-        // skips the "first click + then refresh" two-step by running the
-        // BFS straight away on whichever node was right-clicked.
+        // Node right-click menu — only two items. Anchor turns Lighthouse
+        // on (if it isn't already) and runs the BFS from this node. Off
+        // turns the mode off and hides the floating legend panel.
         const origNode = LGraphCanvas.prototype.getNodeMenuOptions;
         LGraphCanvas.prototype.getNodeMenuOptions = function (node) {
             const options = origNode.apply(this, arguments);
             options.push(null); // separator
             options.push({
-                content: LIGHTHOUSE_ENABLED
-                    ? "🔦 Lighthouse: ON  (click to disable)"
-                    : "🔦 Lighthouse: OFF (click to enable)",
-                callback: () => setEnabled(!LIGHTHOUSE_ENABLED),
-            });
-            options.push({
-                content: "🔦 Lighthouse: Anchor on this node",
+                content: "🔦 Lighthouse: Anchor from current node",
                 callback: () => anchorOn(node?.id),
             });
             options.push({
-                content: "🔦 Lighthouse: Refresh from current selection",
-                callback: () => { if (LIGHTHOUSE_ENABLED) refreshSelection(); },
+                content: "🔦 Lighthouse: Off",
+                callback: () => setEnabled(false),
             });
             return options;
         };

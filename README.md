@@ -21,7 +21,7 @@ Lighthouse is a non-destructive overlay that answers it visually. Click the node
 
 ### What it does
 
-Right-click on the canvas and toggle **🔦 Lighthouse: ON**. Then click any node:
+Right-click any node and pick **🔦 Lighthouse: Anchor from current node**. The rest of the workflow lights up by graph distance from that node:
 
 | Distance | Halo |
 |---|---|
@@ -33,7 +33,7 @@ Right-click on the canvas and toggle **🔦 Lighthouse: ON**. Then click any nod
 | 5 hops | blue |
 | 6+ hops | violet |
 
-A small legend appears in the bottom-left of the canvas while the mode is active. Toggle it off when you're done — the workflow returns to its normal appearance.
+A floating legend panel appears in the bottom-left of the viewport while the mode is active, with a colourbar and a header that reads "anchored on `<node title>`". Click the **×** in its corner (or the right-click menu's **Off** item) to dismiss — the workflow returns to its normal appearance.
 
 Works in both directions — Lighthouse walks both **upstream** (input links, what feeds this node) and **downstream** (output links, what consumes it).
 
@@ -41,11 +41,10 @@ Works in both directions — Lighthouse walks both **upstream** (input links, wh
 
 ### Right-click menu actions
 
-The toggle is available **both on the empty canvas right-click menu and on any node's right-click menu** so you don't have to navigate away to flip the mode.
+Two menu items, both on the **node** right-click menu (not the canvas menu):
 
-- **🔦 Lighthouse: ON / OFF** — toggle the mode (canvas + node menus).
-- **🔦 Lighthouse: Anchor on this node** — *(node menu only)* run the BFS straight away from the right-clicked node, even if it isn't currently selected. Lights up the mode if it's off.
-- **🔦 Lighthouse: Refresh from current selection** — re-run the BFS without changing selection. Useful after you've reconnected wires and want the halo refreshed.
+- **🔦 Lighthouse: Anchor from current node** — runs the BFS straight away from the right-clicked node. Turns Lighthouse on if it was off.
+- **🔦 Lighthouse: Off** — turns the mode off and hides the legend panel.
 
 ---
 
